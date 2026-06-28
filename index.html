@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Convertidor de Monedas</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: #121212;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .tarjeta {
+      background-color: #1e1e1e;
+      border: 2px solid #FFD700;
+      border-radius: 16px;
+      padding: 30px;
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+    }
+    h1 {
+      color: #FFD700;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    label {
+      color: #FFD700;
+      font-size: 13px;
+      display: block;
+      text-align: left;
+      margin-top: 15px;
+      margin-bottom: 4px;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #FFD700;
+      background-color: #2a2a2a;
+      color: #FFD700;
+      font-size: 16px;
+    }
+    .fila-monedas {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .fila-monedas select { flex: 1; }
+    .btn-intercambiar {
+      background: none;
+      border: 1px solid #FFD700;
+      color: #FFD700;
+      font-size: 20px;
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    button.convertir {
+      width: 100%;
+      padding: 14px;
+      margin-top: 20px;
+      border-radius: 8px;
+      border: none;
+      background-color: #FFD700;
+      color: #121212;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button.convertir:hover { background-color: #e6c200; }
+    .tasa {
+      color: #aaa;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .resultado {
+      color: #FFD700;
+      font-size: 22px;
+      font-weight: bold;
+      margin-top: 15px;
+      min-height: 30px;
+    }
+    .error {
+      color: #ff4444;
+      font-size: 14px;
+      margin-top: 8px;
+      min-height: 20px;
+    }
+    .grafico-contenedor {
+      margin-top: 25px;
+    }
+    .grafico-contenedor h3 {
+      color: #FFD700;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="tarjeta">
+    <h1>💱 Convertidor de Monedas</h1>
+
+    <label>Cantidad</label>
+    <input type="number" id="cantidad" placeholder="Escribe una cantidad" min="0">
+
+    <label>De:</label>
+    <div class="fila-monedas">
+      <select id="de">
+        <option value="USD">🇺🇸 Dólar (USD)</option>
+        <option value="PEN">🇵🇪 Sol peruano (PEN)</option>
+        <option value="ARS">🇦🇷 Peso argentino (ARS)</option>
+        <option value="EUR">🇪🇺 Euro (EUR)</option>
+        <option value="BRL">🇧🇷 Real brasileño (BRL)</option>
+        <option value="CLP">🇨🇱 Peso chileno (CLP)</option>
+        <option value="MXN">🇲🇽 Peso mexicano (MXN)</option>
+        <option value="COP">🇨🇴 Peso colombiano (COP)</option>
+        <option value="GBP">🇬🇧 Libra esterlina (GBP)</option>
+        <option value="JPY">🇯🇵 Yen japonés (JPY)</option>
+      </select>
+      <button class="btn-intercambiar" onclick="intercambiar()">⇅</button>
+    </div>
+
+    <label>A:</label>
+    <select id="a">
+      <option value="PEN">🇵🇪 Sol peruano (PEN)</option>
+      <option value="USD">🇺🇸 Dólar (USD)</option>
+      <option value="ARS">🇦🇷 Peso argentino (ARS)</option>
+      <option value="EUR">🇪🇺 Euro (EUR)</option>
+      <option value="BRL">🇧🇷 Real brasileño (BRL)</option>
+      <option value="CLP">🇨🇱 Peso chileno (CLP)</option>
+      <option value="MXN">🇲🇽 Peso mexicano (MXN)</option>
+      <option value="COP">🇨🇴 Peso colombiano (COP)</option>
+      <option value="GBP">🇬🇧 Libra esterlina (GBP)</option>
+      <option value="JPY">🇯🇵 Yen japonés (JPY)</option>
+    </select>
+
+    <button class="convertir" onclick="convertir()">Convertir</button>
+
+    <p class="error" id="error"></p>
+    <p class="tasa" id="tasa"></p>
+    <p class="resultado" id="resultado"></p>
+
+    <div class="grafico-contenedor" id="grafico-contenedor" style="display:none">
+      <h3>📈 Últimos 7 días</h3>
+      <canvas id="miGrafico"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let miGrafico = null;
+
+    function intercambiar() {
+      const de = document.getElementById("de");
+      const a = document.getElementById("a");
+      const temp = de.value;
+      de.value = a.value;
+      a.value = temp;
+    }
+
+    async function convertir() {
+      const cantidad = document.getElementById("cantidad").value;
+      const de = document.getElementById("de").value;
+      const a = document.getElementById("a").value;
+      const errorEl = document.getElementById("error");
+      const resultadoEl = document.getElementById("resultado");
+      const tasaEl = document.getElementById("tasa");
+
+      errorEl.innerText = "";
+      resultadoEl.innerText = "";
+      tasaEl.innerText = "";
+
+      if (!cantidad || cantidad <= 0) {
+        errorEl.innerText = "⚠️ Por favor escribe una cantidad válida.";
+        return;
+      }
+      if (de === a) {
+        errorEl.innerText = "⚠️ Elige monedas diferentes.";
+        return;
+      }
+
+      try {
+        const resp = await fetch(`https://api.frankfurter.dev/v2/rate/${de}/${a}`);
+        const datos = await resp.json();
+        const tasa = datos.rate;
+        const total = (cantidad * tasa).toFixed(2);
+
+        resultadoEl.innerText = `${cantidad} ${de} = ${total} ${a}`;
+        tasaEl.innerText = `1 ${de} = ${tasa} ${a}`;
+
+        cargarGrafico(de, a);
+      } catch {
+        errorEl.innerText = "❌ Error al obtener datos. Verifica tu conexión.";
+      }
+    }
+
+    async function cargarGrafico(de, a) {
+      const hoy = new Date();
+      const hace7 = new Date();
+      hace7.setDate(hoy.getDate() - 7);
+      const desde = hace7.toISOString().split("T")[0];
+      const hasta = hoy.toISOString().split("T")[0];
+
+      const resp = await fetch(`https://api.frankfurter.dev/v2/rates?base=${de}&quotes=${a}&from=${desde}&to=${hasta}`);
+      const datos = await resp.json();
+
+      const fechas = Object.keys(datos.rates);
+      const valores = fechas.map(f => datos.rates[f][a]);
+
+      document.getElementById("grafico-contenedor").style.display = "block";
+
+      if (miGrafico) miGrafico.destroy();
+
+      miGrafico = new Chart(document.getElementById("miGrafico"), {
+        type: "line",
+        data: {
+          labels: fechas,
+          datasets: [{
+            label: `${de} → ${a}`,
+            data: valores,
+            borderColor: "#FFD700",
+            backgroundColor: "rgba(255,215,0,0.1)",
+            borderWidth: 2,
+            pointBackgroundColor: "#FFD700",
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          plugins: { legend: { labels: { color: "#FFD700" } } },
+          scales: {
+            x: { ticks: { color: "#aaa" }, grid: { color: "#333" } },
+            y: { ticks: { color: "#aaa" }, grid: { color: "#333" } }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
